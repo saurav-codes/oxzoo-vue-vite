@@ -5,10 +5,8 @@
 name = "oxzoo-vue-vite"
 branch = "main"
 runtime = "node"
-framework = "generic"
 package_manager = "npm"
 port = 9103
-environment_file = "/etc/ox/projects/oxzoo-vue-vite.env"
 
 required_packages = ["nodejs"]
 
