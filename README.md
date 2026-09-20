@@ -23,7 +23,7 @@ Set `GREETING_TAG` in the ox Environment editor BEFORE the first deploy, so both
 
 ## Deploy with ox
 
-1. Paste the clone URL `https://github.com/saurav-codes/oxzoo-vue-vite.git` into the ox dashboard.
+1. Paste the clone URL `git@github.com:saurav-codes/oxzoo-vue-vite.git` into the ox dashboard.
 2. In the Environment editor, add `GREETING_TAG` (any short tag, for example `v1`) before the first deploy.
 3. Press Deploy. ox installs deps (`npm ci`), builds the SPA (`npm run build`), starts `node server/index.js`, and polls `http://127.0.0.1:9103/health` until ready.
 
