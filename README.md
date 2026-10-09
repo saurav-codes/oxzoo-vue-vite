@@ -1,5 +1,7 @@
 # oxzoo-vue-vite
 
+Deployed with [ox](https://deploywithox.com): deploy a repo to your own server with one command, no Docker. [Docs](https://deploywithox.com/docs) · [Guide for this stack](https://deploywithox.com/docs/guides/node)
+
 This repo is the official ox example for a Vue 3 SPA built with Vite plus a small Express 4 API on one Ubuntu VPS: ox runs `npm ci` and `npm run build`, starts the API on `127.0.0.1:9103` under systemd, and nginx serves the built `dist/` folder while proxying only `/api` and `/health` to it. One env var, `GREETING_TAG`, flows through the stack twice, once at runtime (Express reads it per request) and once at build time (Vite bakes it into the SPA bundle), so the deployed page demonstrates both env paths ox supports.
 
 ## Stack
