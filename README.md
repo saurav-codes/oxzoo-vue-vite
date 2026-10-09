@@ -2,50 +2,83 @@
 
 Deployed with [ox](https://deploywithox.com): deploy a repo to your own server with one command, no Docker. [Docs](https://deploywithox.com/docs) · [Guide for this stack](https://deploywithox.com/docs/guides/node)
 
-This repo is the official ox example for a Vue 3 SPA built with Vite plus a small Express 4 API on one Ubuntu VPS: ox runs `npm ci` and `npm run build`, starts the API on `127.0.0.1:9103` under systemd, and nginx serves the built `dist/` folder while proxying only `/api` and `/health` to it. One env var, `GREETING_TAG`, flows through the stack twice, once at runtime (Express reads it per request) and once at build time (Vite bakes it into the SPA bundle), so the deployed page demonstrates both env paths ox supports.
+An [ox](https://deploywithox.com) deploy example: a Vue 3 SPA (Vite 5) with an Express 4 API and npm, deployed to your own Ubuntu server. systemd runs Express, and Caddy serves the built SPA with an `index.html` fallback while sending only `/api` and `/health` to Express, so one variable powers both halves of the demo.
 
 ## Stack
 
-| Piece | Choice | Where |
-|---|---|---|
-| Frontend | Vue 3 + Vite 5 | `client/`, built to `dist/` |
-| API | Express 4 | `server/index.js` |
-| Package manager | npm | `package-lock.json` committed |
-| Node | 22 via NodeSource apt source | `[[apt_sources]]` in `ox.toml` |
-| Edge | nginx (managed by ox) | serves `dist/`, proxies `/api` and `/health` |
+| Layer | Tool | Version |
+| ----- | ---- | ------- |
+| Frontend | Vue | 3.5 |
+| Bundler | Vite | 5 |
+| API | Express | 4 |
+| Package manager | npm | `package-lock.json` is committed |
+| Runtime | Node.js | 24 (ox's default; mise installs it) |
+
+## ox.toml
+
+```toml
+# Express API + Vue 3 SPA with npm.
+
+[app]
+health = "/health"
+
+[static]
+dir = "dist"
+spa = true
+api = ["/api", "/health"]
+```
+
+ox detects `npm ci` from `package-lock.json`, and `npm run build` and `npm run start` (`node server/index.js`) from `package.json`.
 
 ## Environment flow
 
-One variable, two paths:
+1. **Run time (API):** `server/index.js` reads `process.env.GREETING_TAG` on every `GET /api/greeting` and returns `hello world oxzoo-vue-vite_<GREETING_TAG>`.
+2. **Build time (SPA):** `vite.config.js` sets `envPrefix: ["GREETING_", "VITE_"]`, so `client/src/App.vue` reads `import.meta.env.GREETING_TAG` and Vite bakes it into `dist/`.
 
-- **Runtime (API)**: `server/index.js` reads `process.env.GREETING_TAG` on every `GET /api/greeting` and answers `hello world oxzoo-vue-vite_{GREETING_TAG}` as `text/plain`.
-- **Build time (SPA)**: `vite.config.js` sets `envPrefix: ["GREETING_", "VITE_"]`, so the same variable is exposed to the app as `import.meta.env.GREETING_TAG` and baked into the bundle when `npm run build` runs. Changing it later requires a rebuild (a redeploy does that).
-
-Set `GREETING_TAG` in the ox Environment editor BEFORE the first deploy, so both the API process and the build see it.
+ox sets your variables before the build, and changing one with `ox vars set` redeploys, which rebuilds the SPA.
 
 ## Deploy with ox
 
-1. Paste the clone URL `git@github.com:saurav-codes/oxzoo-vue-vite.git` into the ox dashboard.
-2. In the Environment editor, add `GREETING_TAG` (any short tag, for example `v1`) before the first deploy.
-3. Press Deploy. ox installs deps (`npm ci`), builds the SPA (`npm run build`), starts `node server/index.js`, and polls `http://127.0.0.1:9103/health` until ready.
+```sh
+curl -fsSL https://deploywithox.com/install.sh | sh
+ox login
+ox new https://github.com/saurav-codes/oxzoo-vue-vite
+printf 'GREETING_TAG=demo\n' | ox review oxzoo-vue-vite --from-file - --wait
+```
 
-nginx serves `dist/` from the current release with an `index.html` fallback (SPA mode) and proxies only `/api` and `/health` to the Express process.
+The plan, offline:
+
+```console
+$ ox check .
+ox check . (manifest: ox.toml)
+
+  app.start                  npm run start                                        detected:package.json
+  app.health                 /health                                              declared
+  static.dir                 dist                                                 declared
+  static.spa                 true                                                 declared
+  static.api                 /api, /health                                        declared
+  build.install              npm ci                                               detected:package-lock.json
+  build.commands[0]          npm run build                                        detected:package.json
+  tools.node                 24                                                   default
+
+  Provided by ox: PORT, HOST, OX_ENV, OX_PROJECT, OX_RELEASE, OX_DATA_DIR, PUBLIC_URL, PUBLIC_HOST
+  Set on the dashboard before the first deploy: GREETING_TAG
+
+Ready to deploy.
+```
 
 ## Expected output
 
-With `GREETING_TAG=<GREETING_TAG>` set in ox, the page shows the project heading plus:
-
 ```
+oxzoo-vue-vite
 frontend: hello world oxzoo-vue-vite_<GREETING_TAG>
 backend: hello world oxzoo-vue-vite_<GREETING_TAG>
 ```
 
-## Local check
+## Local development
 
-```bash
-GREETING_TAG=localtest npm install
-GREETING_TAG=localtest npm run build   # bakes the tag into dist/
-GREETING_TAG=localtest npm start       # API on http://127.0.0.1:9103
+```sh
+npm ci
+GREETING_TAG=localtest npm run build
+GREETING_TAG=localtest PORT=9103 node server/index.js
 ```
-
-The API itself answers only `/api/greeting` and `/health`; serving `dist/` is nginx's job on the VPS.
